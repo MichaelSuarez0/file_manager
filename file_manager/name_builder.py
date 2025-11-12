@@ -1,54 +1,72 @@
-from pathlib import Path
 import shutil
+from pathlib import Path
 from typing import Callable, Self
 
 
-class NameBuilder:
+class ESNameBuilder:
     def __init__(self, path: Path):
         self.path = path
         self._pipeline: list[Callable] = []
-        self._excepciones = ("de", "del", "la", "el", "en", "y", "con", "a", "los", "las", "e")
+        self._excepciones = (
+            "de",
+            "del",
+            "la",
+            "el",
+            "en",
+            "y",
+            "con",
+            "a",
+            "los",
+            "las",
+            "e",
+        )
 
     # ==== Métodos de construcción del pipeline ====
-    def filter(self, keyword: str, filter_out: bool = False)-> Self:
+    def filter(self, keyword: str, filter_out: bool = False) -> Self:
         def _f(name: str) -> str:
             if filter_out:
                 return name if keyword not in name else ""
             else:
                 return name if keyword in name else ""
+
         self._pipeline.append(_f)
         return self
 
-    def keep_after(self, char: str = "-")-> Self:
+    def keep_after(self, char: str = "-") -> Self:
         def _f(name: str) -> str:
             parts = name.split(char)
             if len(parts) == 1:
                 return parts[0].split(".")[-1].strip()
             return " ".join(parts[1:]).strip()
-        self._pipeline.append(_f)
-        return self
-    
-    def replace(self, old: str, new: str)-> Self:
-        def _f(name: str) -> str:
-            return name.replace(old, new)
+
         self._pipeline.append(_f)
         return self
 
-    def normalize_spaces_lower(self)-> Self:
+    def replace(self, old: str, new: str) -> Self:
+        def _f(name: str) -> str:
+            return name.replace(old, new)
+
+        self._pipeline.append(_f)
+        return self
+
+    def normalize_spaces_lower(self) -> Self:
         self._pipeline.append(lambda s: " ".join(s.split()).lower())
         return self
 
-    def add_dash_after_keywords(self, keywords=("encuentro prospectivo", "nota de actualidad")):
+    def add_dash_after_keywords(
+        self, keywords=("encuentro prospectivo", "nota de actualidad")
+    ):
         def _f(name: str) -> str:
             for k in keywords:
                 if k in name:
                     name = name.replace(k, f"{k} -")
             return name
+
         self._pipeline.append(_f)
         return self
 
     # Si toda la palabra está en mayúsculas dejarla así
-    def smart_title(self, excepciones=None)-> Self:
+    def smart_title(self, excepciones=None) -> Self:
         if excepciones:
             self._excepciones = excepciones
 
@@ -86,6 +104,7 @@ class NameBuilder:
             self.path.rename(new_path)
         return new_path
 
+
 def flatten_to_base(base_dir: Path, pattern: str = "*") -> None:
     """
     Copia un nivel arriba (al directorio base) todos los archivos contenidos en subdirectorios.
@@ -110,21 +129,22 @@ def flatten_to_base(base_dir: Path, pattern: str = "*") -> None:
             # copiar en lugar de mover
             shutil.copy2(str(file_path), str(target))
 
+
 if __name__ == "__main__":
     DIR_PATH = Path(r"C:\Users\micha\OneDrive\CEPLAN\0. Subir últimas fichas")
     for path in DIR_PATH.iterdir():
         builder = (
-            NameBuilder(path)
-            #.filter("PPT", filter_out=True)
-            #.keep_after("-")
-            #.replace(".", " -")
-            #.normalize_spaces_lower()
-            #.add_dash_after_keywords()
+            ESNameBuilder(path)
+            # .filter("PPT", filter_out=True)
+            # .keep_after("-")
+            # .replace(".", " -")
+            # .normalize_spaces_lower()
+            # .add_dash_after_keywords()
             .smart_title()
         )
         new_name = builder.build()
         print(new_name)
-    #dry run: solo mostrar, no renombrar
-    #print(f"[DRY-RUN] {path.name} -> {new_name}")
-    
-    #flatten_to_base(DIR_PATH)
+    # dry run: solo mostrar, no renombrar
+    # print(f"[DRY-RUN] {path.name} -> {new_name}")
+
+    # flatten_to_base(DIR_PATH)

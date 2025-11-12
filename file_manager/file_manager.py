@@ -3,7 +3,7 @@ import re
 import shutil
 import warnings
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Self, Sequence
 
 # Configuración del logging para guardar en el archivo con ruta personalizada
 
@@ -21,6 +21,7 @@ class FileManager:
         self.USER_CWD = Path.cwd()
         self.max_depth: int = 0
         self.current_depth: int = 0
+        self.file_paths: list[Path] = []
 
     # -----------------------------------------
     # --------  Basic functionality
@@ -114,61 +115,66 @@ class FileManager:
         self.current_depth = 0
         return found_file_paths
 
-    def filter_files_by_extension(
+    # TODO: Move to file_filterer or smth
+    def filter_by_extension(
         self,
         extension: str,
         filter_out: bool = False,
-        file_paths: Optional[list[Path]] = None,
-    ) -> list[Path]:
+        # file_paths: Optional[list[Path]] = None,
+    ) -> Self:
         if extension and not extension[0] == ".":
             raise ValueError("'extension' should start with a '.'")
 
-        if not file_paths:
-            file_paths = self.list_files_recursive(self.SEARCH_DIR)
+        if not self.file_paths:
+            self.file_paths = self.list_files_recursive(self.SEARCH_DIR)
 
         if filter_out:
-            file_paths = [item for item in file_paths if item.suffix != extension]
+            self.file_paths = [item for item in self.file_paths if item.suffix != extension]
         else:
-            file_paths = [item for item in file_paths if item.suffix == extension]
-        return file_paths
+            self.file_paths = [item for item in self.file_paths if item.suffix == extension]
+        return self
 
-    def filter_files_by_regex(
+    def filter_by_regex_match(
         self,
         regex: str,
         filter_out: bool = False,
-        file_paths: Optional[list[Path]] = None,
-    ) -> list[Path]:
+        # file_paths: Optional[list[Path]] = None,
+    ) -> Self:
         
-        if not file_paths:
-            file_paths = self.list_files_recursive(self.SEARCH_DIR)
+        if not self.file_paths:
+            self.file_paths = self.list_files_recursive(self.SEARCH_DIR)
 
         if filter_out:
-            file_paths = [
+            self.file_paths = [
                 item
-                for item in file_paths
+                for item in self.file_paths
                 if not re.match(pattern=regex, string=item.name)
             ]
         else:
-            file_paths = [
-                item for item in file_paths if re.match(pattern=regex, string=item.name)
+            self.file_paths = [
+                item for item in self.file_paths if re.match(pattern=regex, string=item.name)
             ]
-        return file_paths
+        return self
 
-    def filter_files_by_names(
+    def filter_by_names(
         self,
         names: Sequence[str],
-        filter_out: bool = False,
-        file_paths: Optional[list[Path]] = None,
-    ) -> list[Path]:
+        filter_out: bool = False
+    ) -> Self:
         
-        if not file_paths:
-            file_paths = self.list_files_recursive(self.SEARCH_DIR)    
+        if not self.file_paths:
+            self.file_paths = self.list_files_recursive(self.SEARCH_DIR)    
         names_set = set(names)
         
         if filter_out:
-            file_paths = [item for item in file_paths if item.name in names_set]
+            self.file_paths = [item for item in self.file_paths if item.name in names_set]
         else:
-            file_paths = [item for item in file_paths if item.name in names_set]
+            self.file_paths = [item for item in self.file_paths if item.name in names_set]
+        return self
+    
+    def collect(self):
+        file_paths = self.file_paths
+        self.file_paths = []
         return file_paths
 
     @staticmethod
