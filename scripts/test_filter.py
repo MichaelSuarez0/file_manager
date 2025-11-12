@@ -14,8 +14,8 @@ SEARCH_DIR = Path(r"C:\Users\micha\OneDrive\CEPLAN\0. Jhon - Subida de fichas")
 fm = FileManager()
 fm.set_search_dir(SEARCH_DIR)
 fm.set_max_depth(1)
-file_paths = (
-    fm.filter_by_extension(".xlsx")
+file_paths = (fm
+    .filter_by_extension(".xlsx")
     .filter_by_regex_match(regex=r"^(?=.*Fracaso)")
     .collect()
 )

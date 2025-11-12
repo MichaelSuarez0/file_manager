@@ -3,7 +3,7 @@ import re
 import shutil
 import warnings
 from pathlib import Path
-from typing import Optional, Self, Sequence
+from typing import Callable, Self, Sequence
 
 # Configuración del logging para guardar en el archivo con ruta personalizada
 
@@ -22,6 +22,7 @@ class FileManager:
         self.max_depth: int = 0
         self.current_depth: int = 0
         self.file_paths: list[Path] = []
+        self.conditions: list[Callable] = []
 
     # -----------------------------------------
     # --------  Basic functionality
@@ -125,13 +126,12 @@ class FileManager:
         if extension and not extension[0] == ".":
             raise ValueError("'extension' should start with a '.'")
 
-        if not self.file_paths:
-            self.file_paths = self.list_files_recursive(self.SEARCH_DIR)
-
         if filter_out:
-            self.file_paths = [item for item in self.file_paths if item.suffix != extension]
+            condition = lambda x: x if x.suffix != extension else None
         else:
-            self.file_paths = [item for item in self.file_paths if item.suffix == extension]
+            condition = lambda x: x if x.suffix == extension else None
+
+        self.conditions.append(condition)
         return self
 
     def filter_by_regex_match(
@@ -140,42 +140,35 @@ class FileManager:
         filter_out: bool = False,
         # file_paths: Optional[list[Path]] = None,
     ) -> Self:
-        
-        if not self.file_paths:
-            self.file_paths = self.list_files_recursive(self.SEARCH_DIR)
-
         if filter_out:
-            self.file_paths = [
-                item
-                for item in self.file_paths
-                if not re.match(pattern=regex, string=item.name)
-            ]
+            condition = (
+                lambda x: x if not re.match(pattern=regex, string=x.name) else None
+            )
         else:
-            self.file_paths = [
-                item for item in self.file_paths if re.match(pattern=regex, string=item.name)
-            ]
+            condition = lambda x: x if re.match(pattern=regex, string=x.name) else None
+
+        self.conditions.append(condition)
         return self
 
-    def filter_by_names(
-        self,
-        names: Sequence[str],
-        filter_out: bool = False
-    ) -> Self:
-        
-        if not self.file_paths:
-            self.file_paths = self.list_files_recursive(self.SEARCH_DIR)    
+    def filter_by_names(self, names: Sequence[str], filter_out: bool = False) -> Self:
         names_set = set(names)
-        
+
         if filter_out:
-            self.file_paths = [item for item in self.file_paths if item.name in names_set]
+            condition = lambda x: x if x.name not in names_set else None
         else:
-            self.file_paths = [item for item in self.file_paths if item.name in names_set]
+            condition = lambda x: x if x.name in names_set else None
+
+        self.conditions.append(condition)
         return self
-    
-    def collect(self):
-        file_paths = self.file_paths
-        self.file_paths = []
-        return file_paths
+
+    def collect(self, clear_conditions: bool = True):
+        file_paths = self.list_files_recursive(self.SEARCH_DIR)
+        file_paths_filtered = [
+            path for path in file_paths if all(cond(path) is not None for cond in self.conditions)
+        ]
+        if clear_conditions:
+            self.conditions.clear()
+        return file_paths_filtered
 
     @staticmethod
     def sort_files_by_number(file_list: list) -> list:
