@@ -3,7 +3,9 @@ import re
 import shutil
 import warnings
 from pathlib import Path
-from typing import Callable, Self, Sequence
+from typing import Callable, Iterable, Optional, Self, Sequence
+
+from .file_creator import FileCreator
 
 # Configuración del logging para guardar en el archivo con ruta personalizada
 
@@ -18,7 +20,8 @@ class FileManager:
             search_directory (str): Directory to search for files. Should be a valid path string.
         """
         self.SEARCH_DIR: str | Path
-        self.USER_CWD = Path.cwd()
+        # self.USER_CWD = Path.cwd()
+        self.creator: Optional[FileCreator] = None
         self.max_depth: int = 0
         self.current_depth: int = 0
         self.file_paths: list[Path] = []
@@ -83,7 +86,7 @@ class FileManager:
     def append_to_name(self, paths: list[Path]):
         pass
 
-    def list_files_recursive(self, search_dir: Path) -> list[Path]:
+    def _list_files_recursive(self, search_dir: Path) -> list[Path]:
         """
         Lista los nombres de archivos presentes en el directorio de búsqueda.
         Si encuentra un folder, entra al folder y busca archivos recursivamente
@@ -104,7 +107,7 @@ class FileManager:
         for file in search_dir.iterdir():
             if file.is_dir():
                 if self.current_depth <= self.max_depth:
-                    found_file_paths.extend(self.list_files_recursive(file))
+                    found_file_paths.extend(self._list_files_recursive(file))
                 else:
                     found_file_paths.append(file)
             elif file.is_file():
@@ -162,19 +165,42 @@ class FileManager:
         return self
 
     def collect(self, clear_conditions: bool = True):
-        file_paths = self.list_files_recursive(self.SEARCH_DIR)
+        file_paths = self._list_files_recursive(self.SEARCH_DIR)
         file_paths_filtered = [
-            path for path in file_paths if all(cond(path) is not None for cond in self.conditions)
+            path
+            for path in file_paths
+            if all(cond(path) is not None for cond in self.conditions)
         ]
         if clear_conditions:
             self.conditions.clear()
         return file_paths_filtered
 
-    @staticmethod
-    def sort_files_by_number(file_list: list) -> list:
-        def extract_number(text: str) -> int:
-            # This finds all numbers in the string and returns the first occurrence.
-            numbers = re.findall(r"\d+", text)
-            return int(numbers[0]) if numbers else float("inf")
+    def __assert_creator(self):
+        if not self.creator:
+            self.creator = FileCreator()
+            
+    def touch(self, file: str | list[str]) -> None:
+        """Creates a file in user CWD"""
+        self.__assert_creator()
+        if isinstance(file, str):
+            self.creator.create_file(file_name)
+        elif isinstance(file, list):
+            for file_name in file:
+                self.creator.create_file(file_name)
+    
+    def create_files(self, files: Iterable[str | Path], target_dir: Path):
+        """Creates a file in target_dir"""
+        self.__assert_creator()
+        return self.creator.create_files(files, target_dir)
+        
+        
+        
 
-        return sorted(file_list, key=extract_number)
+    # @staticmethod
+    # def sort_files_by_number(file_list: list) -> list:
+    #     def extract_number(text: str) -> int:
+    #         # This finds all numbers in the string and returns the first occurrence.
+    #         numbers = re.findall(r"\d+", text)
+    #         return int(numbers[0]) if numbers else float("inf")
+
+    #     return sorted(file_list, key=extract_number)
