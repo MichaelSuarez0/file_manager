@@ -25,6 +25,5 @@ class FileCreator:
 
         elif all(isinstance(f, Path) for f in files):
             return [self._create_file(file.name, target_dir) for file in files]
-
         else:
             raise TypeError("Files should a list of str or Path, do not combine types")

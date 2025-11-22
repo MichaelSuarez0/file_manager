@@ -145,10 +145,26 @@ class FileManager:
     ) -> Self:
         if filter_out:
             condition = (
-                lambda x: x if not re.match(pattern=regex, string=x.name) else None
+                lambda x: x if not re.match(pattern=regex, string=x.stem) else None
             )
         else:
-            condition = lambda x: x if re.match(pattern=regex, string=x.name) else None
+            condition = lambda x: x if re.match(pattern=regex, string=x.stem) else None
+
+        self.conditions.append(condition)
+        return self
+        
+    def filter_by_regex_search(
+        self,
+        regex: str,
+        filter_out: bool = False,
+        # file_paths: Optional[list[Path]] = None,
+    ) -> Self:
+        if filter_out:
+            condition = (
+                lambda x: x if not re.search(pattern=regex, string=x.stem) else None
+            )
+        else:
+            condition = lambda x: x if re.search(pattern=regex, string=x.stem) else None
 
         self.conditions.append(condition)
         return self
@@ -157,14 +173,14 @@ class FileManager:
         names_set = set(names)
 
         if filter_out:
-            condition = lambda x: x if x.name not in names_set else None
+            condition = lambda x: x if x.stem not in names_set else None
         else:
-            condition = lambda x: x if x.name in names_set else None
+            condition = lambda x: x if x.stem in names_set else None
 
         self.conditions.append(condition)
         return self
 
-    def collect(self, clear_conditions: bool = True):
+    def collect(self, clear_conditions: bool = True) -> list[Path]:
         file_paths = self._list_files_recursive(self.SEARCH_DIR)
         file_paths_filtered = [
             path
@@ -178,7 +194,7 @@ class FileManager:
     def __assert_creator(self):
         if not self.creator:
             self.creator = FileCreator()
-            
+
     def touch(self, file: str | list[str]) -> None:
         """Creates a file in user CWD"""
         self.__assert_creator()
@@ -187,14 +203,11 @@ class FileManager:
         elif isinstance(file, list):
             for file_name in file:
                 self.creator.create_file(file_name)
-    
+
     def create_files(self, files: Iterable[str | Path], target_dir: Path):
         """Creates a file in target_dir"""
         self.__assert_creator()
         return self.creator.create_files(files, target_dir)
-        
-        
-        
 
     # @staticmethod
     # def sort_files_by_number(file_list: list) -> list:

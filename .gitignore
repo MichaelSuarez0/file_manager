@@ -12,3 +12,5 @@ wheels/
 .env
 test_folders/
 *.txt
+*.ini
+duplicated/
